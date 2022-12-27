@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/index.js",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=16.0.0"
   },
   "scripts": {
     "build-dts": "rm -f src/*.d.ts && tsc --emitDeclarationOnly && prettier src/*.d.ts --write",
