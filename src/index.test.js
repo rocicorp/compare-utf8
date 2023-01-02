@@ -1,8 +1,7 @@
 // @ts-check
 
-// @ts-ignore
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test } from "mocha";
+import assert from "assert/strict";
 
 import { compareUTF8, utf16LengthForCodePoint } from "./index.js";
 
