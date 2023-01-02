@@ -4,16 +4,13 @@
   "description": "Compares JS strings using UTF-8 bitwise semantics",
   "type": "module",
   "main": "src/index.js",
-  "engines": {
-    "node": ">=18.0.0"
-  },
   "scripts": {
     "build-dts": "rm -f src/*.d.ts && tsc --emitDeclarationOnly && prettier src/*.d.ts --write",
     "build": "npm run build-dts",
     "format": "prettier *.json src/ --write",
     "prepare": "npm run build && npm run format",
     "prepack": "npm run prepare",
-    "test": "node --test"
+    "test": "mocha src"
   },
   "repository": {
     "type": "git",
@@ -32,6 +29,7 @@
   },
   "homepage": "https://github.com/rocicorp/compare-utf8#readme",
   "devDependencies": {
+    "mocha": "^10.2.0",
     "prettier": "^2.6.2",
     "typescript": "^4.7.2"
   },
