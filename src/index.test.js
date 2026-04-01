@@ -1,11 +1,13 @@
 // @ts-check
 
-import { test } from "mocha";
-import assert from "assert/strict";
+import { expect, test } from "vitest";
 
 import { compareUTF8, utf16LengthForCodePoint } from "./index.js";
 
-function compareArrays(a, b) {
+function compareArrays(
+  /** @type {Uint8Array} */ a,
+  /** @type {Uint8Array} */ b,
+) {
   const aLength = a.length;
   const bLength = b.length;
   const length = Math.min(aLength, bLength);
@@ -20,16 +22,20 @@ function compareArrays(a, b) {
 }
 
 test("compareStringsAsUTF8", () => {
-  const t = (a, b) => {
-    const t2 = (a, b, expected) => {
+  const t = (/** @type {string} */ a, /** @type {string} */ b) => {
+    const t2 = (
+      /** @type {string} */ a,
+      /** @type {string} */ b,
+      /** @type {number} */ expected,
+    ) => {
       const encoder = new TextEncoder();
       const aArray = encoder.encode(a);
       const bArray = encoder.encode(b);
       const encoderResult = Math.sign(compareArrays(aArray, bArray));
-      assert.strictEqual(encoderResult, expected);
+      expect(encoderResult).toBe(expected);
       const customResult = Math.sign(compareUTF8(a, b));
-      assert.strictEqual(customResult, expected);
-      assert.strictEqual(encoderResult, customResult);
+      expect(customResult).toBe(expected);
+      expect(encoderResult).toBe(customResult);
     };
     t2(a, b, -1);
     t2(b, a, 1);
@@ -75,9 +81,6 @@ test("compareStringsAsUTF8", () => {
 
 test("length", () => {
   for (let i = 1; i < 0x10ffff; i *= 2) {
-    assert.strictEqual(
-      utf16LengthForCodePoint(i),
-      String.fromCodePoint(i).length
-    );
+    expect(utf16LengthForCodePoint(i)).toBe(String.fromCodePoint(i).length);
   }
 });

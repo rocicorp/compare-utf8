@@ -1,57 +1,6 @@
 // @ts-check
 
 /**
- * Compares two JavaScript strings as if they were UTF-8 encoded byte arrays.
- * @param {string} a
- * @param {string} b
- * @returns {number}
- */
-export function compareUTF8(a, b) {
-  const aLength = a.length;
-  const bLength = b.length;
-  const length = Math.min(aLength, bLength);
-  for (let i = 0; i < length; ) {
-    const aCodePoint = /** @type {number} */ (a.codePointAt(i));
-    const bCodePoint = /** @type {number} */ (b.codePointAt(i));
-    if (aCodePoint !== bCodePoint) {
-      // Code points below 0x80 are represented the same way in UTF-8 as in
-      // UTF-16.
-      if (aCodePoint < 0x80 && bCodePoint < 0x80) {
-        return aCodePoint - bCodePoint;
-      }
-
-      // get the UTF-8 bytes for the code points
-      const aLength = utf8Bytes(aCodePoint, aBytes);
-      const bLength = utf8Bytes(bCodePoint, bBytes);
-      return compareArrays(aBytes, aLength, bBytes, bLength);
-    }
-
-    i += utf16LengthForCodePoint(aCodePoint);
-  }
-
-  return aLength - bLength;
-}
-
-/**
- * @param {number[]} a
- * @param {number} aLength
- * @param {number[]} b
- * @param {number} bLength
- * @returns {number}
- */
-function compareArrays(a, aLength, b, bLength) {
-  const length = Math.min(aLength, bLength);
-  for (let i = 0; i < length; i++) {
-    const aValue = a[i];
-    const bValue = b[i];
-    if (aValue !== bValue) {
-      return aValue - bValue;
-    }
-  }
-  return aLength - bLength;
-}
-
-/**
  * @param {number} aCodePoint
  * @returns {number}
  */
@@ -59,45 +8,51 @@ export function utf16LengthForCodePoint(aCodePoint) {
   return aCodePoint > 0xffff ? 2 : 1;
 }
 
-// 2 preallocated arrays for utf8Bytes.
-const arr = () => Array.from({ length: 4 }, () => 0);
-const aBytes = arr();
-const bBytes = arr();
+/** Matches any surrogate code unit (U+D800–U+DFFF). */
+const surrogateRe = /[\uD800-\uDFFF]/;
 
 /**
- * @param {number} codePoint
- * @param {number[]} bytes
+ * Compares two JavaScript strings as if they were UTF-8 encoded byte arrays.
+ *
+ * Fast path: for strings without surrogate pairs (BMP-only), JS code-unit
+ * order is identical to UTF-8 byte order, so native `<` suffices. For longer
+ * strings the regex check is cheaper than scanning char-by-char; 16 is the
+ * empirically-derived crossover point.
+ *
+ * @param {string} a
+ * @param {string} b
  * @returns {number}
  */
-function utf8Bytes(codePoint, bytes) {
-  if (codePoint < 0x80) {
-    bytes[0] = codePoint;
-    return 1;
+export function compareUTF8(a, b) {
+  if (a === b) return 0;
+  const aLength = a.length;
+
+  // Surrogate code units (U+D800–U+DFFF) can only appear in two-byte string
+  // backing stores, so this regex returns false immediately for pure
+  // Latin-1/ASCII strings (one-byte store) without scanning a single char.
+  if (aLength >= 16 && !surrogateRe.test(a) && !surrogateRe.test(b)) {
+    return a < b ? -1 : a > b ? 1 : 0;
   }
 
-  let count;
-  let offset;
-
-  if (codePoint <= 0x07ff) {
-    count = 1;
-    offset = 0xc0;
-  } else if (codePoint <= 0xffff) {
-    count = 2;
-    offset = 0xe0;
-  } else if (codePoint <= 0x10ffff) {
-    count = 3;
-    offset = 0xf0;
-  } else {
-    throw new Error("Invalid code point");
+  const bLength = b.length;
+  const length = aLength > bLength ? bLength : aLength;
+  for (let i = 0; i < length; i++) {
+    const ac = a.charCodeAt(i);
+    const bc = b.charCodeAt(i);
+    if (ac !== bc) {
+      // For all non-surrogate BMP code units (0x0000–0xD7FF and 0xE000–0xFFFF),
+      // UTF-16 code-unit order equals UTF-8 byte order, so a subtraction suffices.
+      if ((ac < 0xd800 || ac > 0xdfff) && (bc < 0xd800 || bc > 0xdfff)) {
+        return ac - bc;
+      }
+      // Surrogate pair: compare full code points (UTF-8 order = code point order).
+      return (
+        /** @type {number} */ (a.codePointAt(i)) -
+        /** @type {number} */ (b.codePointAt(i))
+      );
+    }
   }
-
-  bytes[0] = (codePoint >> (6 * count)) + offset;
-  let i = 1;
-  for (; count > 0; count--) {
-    const temp = codePoint >> (6 * (count - 1));
-    bytes[i++] = 0x80 | (temp & 0x3f);
-  }
-  return i;
+  return aLength - bLength;
 }
 
 /**
