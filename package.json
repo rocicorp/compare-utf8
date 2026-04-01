@@ -4,12 +4,13 @@
   "description": "Compares JS strings using UTF-8 bitwise semantics",
   "type": "module",
   "main": "src/index.js",
+  "packageManager": "pnpm@10.7.1",
   "scripts": {
     "build-dts": "rm -f src/*.d.ts && tsc --emitDeclarationOnly && prettier src/*.d.ts --write",
-    "build": "npm run build-dts",
+    "build": "pnpm run build-dts",
     "format": "prettier *.json src/ --write",
-    "prepare": "npm run build && npm run format",
-    "prepack": "npm run prepare",
+    "prepare": "pnpm run build && pnpm run format",
+    "prepack": "pnpm run prepare",
     "bench": "node src/bench.js",
     "test": "vitest run"
   },

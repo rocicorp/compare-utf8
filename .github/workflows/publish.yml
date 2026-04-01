@@ -1,0 +1,48 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  # pull_request:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v5
+        with:
+          cache: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Upgrade npm for OIDC trusted publishing support
+        run: COREPACK_ENABLE_STRICT=0 npm install --global npm@latest
+
+      - name: Print tool versions
+        run: |
+          pnpm --version
+          npm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm run build
+
+      - name: Publish to npm with trusted publishing
+        run: pnpm publish --access public --provenance --no-git-checks ${{ github.event_name == 'pull_request' && '--dry-run' || '' }}
