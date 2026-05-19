@@ -4,7 +4,7 @@
   "description": "Compares JS strings using UTF-8 bitwise semantics",
   "type": "module",
   "main": "src/index.js",
-  "packageManager": "pnpm@10.7.1",
+  "packageManager": "pnpm@11.1.3",
   "scripts": {
     "build-dts": "rm -f src/*.d.ts && tsc --emitDeclarationOnly && prettier src/*.d.ts --write",
     "build": "pnpm run build-dts",
