@@ -47,6 +47,16 @@ interpreters (Hermes), where every builtin call costs tens of nanoseconds:
    back to the scalar code-unit/code-point loop, and for long strings that loop
    first bisects the common prefix with native slice equality.
 
+### Ill-formed strings
+
+JavaScript strings may contain lone surrogates, which have no UTF-8 encoding
+(`TextEncoder` replaces them with U+FFFD). `compareUTF8` still defines a total
+order for them so sorted containers stay consistent: the order is lexicographic
+over scalar values, where a valid surrogate pair is one element (its code point)
+and a lone surrogate is one element with its own code unit value. A lone
+surrogate therefore sorts between U+D7FF and U+E000 and below every surrogate
+pair. For well-formed strings this is exactly UTF-8 byte order.
+
 Relative to 0.2.0 this is 2 to 5× faster on Hermes for id-like and prefix-sharing
 strings, 3 to 6× faster on both engines for long strings containing emoji, and
 about 2× faster on V8 for random ids and titles, with no case slower by more

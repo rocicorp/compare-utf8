@@ -90,6 +90,13 @@ function compareSlow(a, b) {
 /**
  * Compares two JavaScript strings as if they were UTF-8 encoded byte arrays.
  *
+ * Ill-formed strings (lone surrogates) have no UTF-8 encoding. They are still
+ * given a total order, so sorted containers stay consistent: lexicographic over
+ * scalar values, where a valid surrogate pair is one element (its code point)
+ * and a lone surrogate is one element with its own code unit value, i.e. it
+ * sorts between U+D7FF and U+E000 and below every pair. This differs from
+ * encoding with U+FFFD replacement, as `TextEncoder` does.
+ *
  * Designed to be cheap on both JIT engines (V8) and interpreters (Hermes),
  * where every builtin call costs tens of nanoseconds:
  *

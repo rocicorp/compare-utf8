@@ -84,3 +84,32 @@ test("length", () => {
     expect(utf16LengthForCodePoint(i)).toBe(String.fromCodePoint(i).length);
   }
 });
+
+test("lone surrogates: defined total order", () => {
+  // A lone surrogate compares as its own code unit value: between U+D7FF and
+  // U+E000, and below every surrogate pair (which compares as a code point
+  // >= U+10000). TextEncoder cannot express this; it replaces lone surrogates
+  // with U+FFFD.
+  expect(compareUTF8("\ud800", "\udc00")).toBeLessThan(0);
+  expect(compareUTF8("\udc00", "\ud800")).toBeGreaterThan(0);
+  expect(compareUTF8("\ud7ff", "\ud800")).toBeLessThan(0);
+  expect(compareUTF8("\udfff", "\ue000")).toBeLessThan(0);
+  expect(compareUTF8("\udbff", "\u{10000}")).toBeLessThan(0);
+  expect(compareUTF8("\udfff", "\u{10000}")).toBeLessThan(0);
+  // A pair is one element; the same high surrogate followed by a non-low unit
+  // is a lone surrogate followed by another element, and sorts below the pair.
+  expect(compareUTF8("\ud800\udc00", "\ud800\uffff")).toBeGreaterThan(0);
+  expect(compareUTF8("\ud800\udc00", "\ud800")).toBeGreaterThan(0);
+});
+
+test("lone surrogates: transitivity of pair vs lone high surrogate + BMP", () => {
+  // 0.2.0 ordered these as a cycle: x < z, z < y, but x > y.
+  const x = "\ud7ff\udbff";
+  const y = "\ud7ff\ud800\ufffe";
+  const z = "\ud7ff\ud800\udc00";
+  expect(compareUTF8(y, x)).toBeLessThan(0);
+  expect(compareUTF8(x, z)).toBeLessThan(0);
+  expect(compareUTF8(y, z)).toBeLessThan(0);
+  expect([x, y, z].sort(compareUTF8)).toEqual([y, x, z]);
+  expect([z, y, x].sort(compareUTF8)).toEqual([y, x, z]);
+});
