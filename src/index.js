@@ -101,14 +101,21 @@ function compareSlow(a, b) {
  * where every builtin call costs tens of nanoseconds:
  *
  * 1. Identity check.
- * 2. Probe the first code unit. Unrelated strings usually differ here, and one
- *    `charCodeAt` per side is the cheapest way to find out.
- * 3. Otherwise let the engine compare natively (memcmp-speed). UTF-16 order can
+ * 2. Otherwise let the engine compare natively (memcmp-speed). UTF-16 order can
  *    only disagree with UTF-8 order when the natively *smaller* string has a
  *    surrogate at the first differing position (and the larger has a code unit
  *    in U+E000–U+FFFF there). So a single surrogate test on the smaller string
  *    proves the native answer correct; only strings that actually contain
  *    surrogates fall back to the scalar comparison.
+ *
+ * There used to be a step between those two that probed the first code unit of
+ * each side, on the theory that unrelated strings usually differ there and two
+ * `charCodeAt` calls are cheaper than a regex. Measured on Hermes that is
+ * backwards: `charCodeAt` is a native call costing tens of nanoseconds, so the
+ * probe adds two calls to every comparison to save one, and removing it is
+ * ~35% faster for both shared-prefix and unrelated inputs. On V8 it is a wash
+ * (~8% either way depending on the shape). Sorted-container keys — the reason
+ * this package exists — share prefixes, so the probe could rarely fire anyway.
  *
  * @param {string} a
  * @param {string} b
@@ -117,22 +124,8 @@ function compareSlow(a, b) {
 export function compareUTF8(a, b) {
   if (a === b) return 0;
 
-  const ac = a.charCodeAt(0);
-  const bc = b.charCodeAt(0);
-  if (ac !== bc) {
-    // An empty string yields NaN above and always lands here; it is a prefix
-    // of anything and sorts first.
-    if (a.length === 0) return -1;
-    if (b.length === 0) return 1;
-    if ((ac < 0xd800 || ac > 0xdfff) && (bc < 0xd800 || bc > 0xdfff)) {
-      return ac - bc;
-    }
-    return (
-      /** @type {number} */ (a.codePointAt(0)) -
-      /** @type {number} */ (b.codePointAt(0))
-    );
-  }
-
+  // An empty string is a prefix of anything and sorts first, which `<` already
+  // gets right, as it does every case where no surrogate is involved.
   if (a < b) {
     return surrogateRe.test(a) ? compareSlow(a, b) : -1;
   }
