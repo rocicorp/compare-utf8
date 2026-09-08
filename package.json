@@ -1,6 +1,6 @@
 {
   "name": "compare-utf8",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Compares JS strings using UTF-8 bitwise semantics",
   "type": "module",
   "main": "src/index.js",
